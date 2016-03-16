@@ -106,6 +106,8 @@ module Dynamoid
                 BigDecimal.new(value.to_s)
               when :array
                 value.to_a
+              when :raw
+                value.class == Hash ? value.deep_symbolize_keys! : value
               when :set
                 Set.new(value)
               when :datetime
@@ -286,6 +288,8 @@ module Dynamoid
             !value.nil? ? value.to_time.to_f : nil
           when :serialized
             options[:serializer] ? options[:serializer].dump(value) : value.to_yaml
+          when :raw
+            !value.nil? ? value : nil
           when :boolean
             !value.nil? ? value.to_s[0] : nil
           else
