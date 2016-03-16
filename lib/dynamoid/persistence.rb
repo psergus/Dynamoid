@@ -107,7 +107,7 @@ module Dynamoid
               when :array
                 value.to_a
               when :raw
-                value.is_a?(Hash) ? value.deep_symbolize_keys! : value
+                value.is_a?(Hash) ? transform_hash(value) : value
               when :set
                 Set.new(value)
               when :datetime
@@ -147,6 +147,22 @@ module Dynamoid
         end
       end
 
+      private
+
+      def transform_hash(hash)
+        {}.tap do |h|
+          hash.each { |key, value| h[key.to_sym] = transform(value) }
+        end
+      end
+
+      def transform(val)
+        case val
+        when BigDecimal; val.to_f
+        when Hash; transform_hash(val)
+        when Array; val.map { |v| transform(v) }
+        else; val
+        end
+      end
     end
 
     # Set updated_at and any passed in field to current DateTime. Useful for things like last_login_at, etc.
