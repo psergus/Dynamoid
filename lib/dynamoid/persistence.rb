@@ -107,7 +107,7 @@ module Dynamoid
               when :array
                 value.to_a
               when :raw
-                value.class == Hash ? value.deep_symbolize_keys! : value
+                value.is_a?(Hash) ? value.deep_symbolize_keys! : value
               when :set
                 Set.new(value)
               when :datetime
