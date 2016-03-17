@@ -96,37 +96,41 @@ module Dynamoid
             value = default_value.respond_to?(:call) ? default_value.call : default_value
           end
 
-          if !value.nil?
+          unless value.nil?
             case options[:type]
-              when :string
-                value.to_s
-              when :integer
-                Integer(value)
-              when :number
-                BigDecimal.new(value.to_s)
-              when :array
-                value.to_a
-              when :raw
-                value.is_a?(Hash) ? transform_hash(value) : value
-              when :set
-                Set.new(value)
-              when :datetime
-                if value.is_a?(Date) || value.is_a?(DateTime) || value.is_a?(Time)
-                  value
-                else
-                  Time.at(value).to_datetime
-                end
-              when :boolean
-                # persisted as 't', but because undump is called during initialize it can come in as true
-                if value == 't' || value == true
-                  true
-                elsif value == 'f' || value == false
-                  false
-                else
-                  raise ArgumentError, "Boolean column neither true nor false"
-                end
+            when :string
+              value.to_s
+            when :integer
+              Integer(value)
+            when :number
+              BigDecimal.new(value.to_s)
+            when :array
+              value.to_a
+            when :raw
+              if value.is_a?(Hash)
+                transform_hash(value)
               else
-                raise ArgumentError, "Unknown type #{options[:type]}"
+                value
+              end
+            when :set
+              Set.new(value)
+            when :datetime
+              if [Date, DateTime, Time].any? { |x| value.is_a?(x) }
+                value
+              else
+                Time.zone.at(value).to_datetime
+              end
+            when :boolean
+              # persisted as 't', but because undump is called during initialize it can come in as true
+              if value == 't' || value == true
+                true
+              elsif value == 'f' || value == false
+                false
+              else
+                raise ArgumentError, "Boolean column neither true nor false"
+              end
+            else
+              raise ArgumentError, "Unknown type #{options[:type]}"
             end
           end
         end
@@ -157,10 +161,18 @@ module Dynamoid
 
       def transform(val)
         case val
-        when BigDecimal; val.to_f
-        when Hash; transform_hash(val)
-        when Array; val.map { |v| transform(v) }
-        else; val
+        when BigDecimal
+          if Dynamoid::Config.convert_big_decimal
+            val.to_f
+          else
+            val
+          end
+        when Hash
+          transform_hash(val)
+        when Array
+          val.map { |v| transform(v) }
+        else
+          val
         end
       end
     end
